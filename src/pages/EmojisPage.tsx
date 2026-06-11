@@ -3,7 +3,6 @@ import { API_BASE, apiFetch } from '../api';
 import ImageUploadInput from '../components/ImageUploadInput';
 
 const EMPTY = { id: '', imageUrl: '', typeId: '', emotionId: '' };
-const DUPLICATE_EMOJI_MESSAGE = 'Each emoji_type can only have one emoji for each emotion';
 
 interface EmotionSlot {
   emotionId: string;
@@ -105,8 +104,8 @@ export default function EmojisPage() {
   const save = async () => {
     setSaving(true);
     try {
-      const duplicate = findDuplicate(form.typeId, form.emotionId, editing ? String(editing.id) : undefined);
       if (editing) {
+        const duplicate = findDuplicate(form.typeId, form.emotionId, String(editing.id));
         if (duplicate && !confirm('Emoji này sẽ ghi đè emoji đang tồn tại cho cặp loại emoji và cảm xúc đã chọn. Tiếp tục?')) {
           return;
         }
@@ -115,9 +114,6 @@ export default function EmojisPage() {
           body: JSON.stringify({ imageUrl: form.imageUrl, typeId: Number(form.typeId), emotionId: Number(form.emotionId) }),
         });
       } else {
-        if (duplicate) {
-          throw new Error(DUPLICATE_EMOJI_MESSAGE);
-        }
         await apiFetch('/admin/emojis', {
           method: 'POST',
           body: JSON.stringify({ id: Number(form.id), imageUrl: form.imageUrl, typeId: Number(form.typeId), emotionId: Number(form.emotionId) }),
@@ -183,11 +179,6 @@ export default function EmojisPage() {
     if (!bulkTypeId) { alert('Vui lòng chọn Loại emoji'); return; }
     const filled = slots.filter(s => s.file);
     if (!filled.length) { alert('Chưa có ảnh nào được kéo vào'); return; }
-    const duplicateSlot = filled.find(slot => findDuplicate(bulkTypeId, slot.emotionId));
-    if (duplicateSlot) {
-      alert(`Lỗi lưu: ${DUPLICATE_EMOJI_MESSAGE}`);
-      return;
-    }
 
     setBulkSaving(true);
     let idCounter = nextId();
@@ -221,10 +212,24 @@ export default function EmojisPage() {
     }
 
     try {
-      await apiFetch('/admin/emojis/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ emojis: results }),
-      });
+      const updates = results.filter(item => findDuplicate(String(item.typeId), String(item.emotionId)));
+      const creates = results.filter(item => !findDuplicate(String(item.typeId), String(item.emotionId)));
+
+      for (const item of updates) {
+        const existing = findDuplicate(String(item.typeId), String(item.emotionId));
+        if (!existing) continue;
+        await apiFetch(`/admin/emojis/${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ imageUrl: item.imageUrl, typeId: item.typeId, emotionId: item.emotionId }),
+        });
+      }
+
+      if (creates.length) {
+        await apiFetch('/admin/emojis/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ emojis: creates }),
+        });
+      }
       setShowBulk(false);
       await load();
     } catch (e: any) {
