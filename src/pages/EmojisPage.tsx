@@ -3,6 +3,7 @@ import { API_BASE, apiFetch } from '../api';
 import ImageUploadInput from '../components/ImageUploadInput';
 
 const EMPTY = { id: '', imageUrl: '', typeId: '', emotionId: '' };
+const DUPLICATE_EMOJI_MESSAGE = 'Each emoji_type can only have one emoji for each emotion';
 
 interface EmotionSlot {
   emotionId: string;
@@ -17,6 +18,7 @@ interface EmotionSlot {
 
 export default function EmojisPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [allItems, setAllItems] = useState<any[]>([]);
   const [emojiTypes, setEmojiTypes] = useState<any[]>([]);
   const [emotions, setEmotions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,36 +37,65 @@ export default function EmojisPage() {
   const [bulkSaving, setBulkSaving] = useState(false);
   const activeSlotId = useRef('');
   const slotFileRef = useRef<HTMLInputElement>(null);
+  const loadSeq = useRef(0);
 
-  const load = () => {
-    setLoading(true);
+  const findDuplicate = (typeId: string, emotionId: string, excludeId?: string) =>
+    allItems.find(item =>
+      String(item.typeId) === String(typeId)
+      && String(item.emotionId) === String(emotionId)
+      && String(item.id) !== String(excludeId)
+    );
+
+  const loadMeta = () => {
     Promise.all([
-      apiFetch('/admin/emojis'),
       apiFetch('/admin/emoji-types'),
       apiFetch('/admin/emotions'),
     ])
-      .then(([emojis, types, emos]) => {
-        setItems(emojis);
+      .then(([types, emos]) => {
         setEmojiTypes(types);
         setEmotions(emos);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch(console.error);
   };
 
-  useEffect(() => { load(); }, []);
+  const load = async (typeId = selectedTypeId) => {
+    const seq = ++loadSeq.current;
+    setLoading(true);
+    try {
+      const path = typeId === 'all'
+        ? '/admin/emojis'
+        : `/admin/emojis?typeId=${encodeURIComponent(typeId)}`;
+      const [visibleItems, everyItem] = await Promise.all([
+        apiFetch(path),
+        typeId === 'all' ? Promise.resolve(null) : apiFetch('/admin/emojis'),
+      ]);
+      if (seq !== loadSeq.current) return;
+      setItems(visibleItems);
+      setAllItems(everyItem ?? visibleItems);
+    } catch (error) {
+      if (seq !== loadSeq.current) return;
+      console.error(error);
+    } finally {
+      if (seq === loadSeq.current) setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadMeta(); }, []);
+  useEffect(() => { load(selectedTypeId); }, [selectedTypeId]);
 
   const nextId = () => {
-    const max = items.reduce((m, i) => Math.max(m, Number(i.id)), 0);
+    const max = allItems.reduce((m, i) => Math.max(m, Number(i.id)), 0);
     return max + 1;
   };
 
-  const filtered = selectedTypeId === 'all'
-    ? items
-    : items.filter(i => String(i.typeId) === selectedTypeId);
+  const filtered = items;
 
   // ── Modal đơn ──────────────────────────────────────────────────────────────
-  const openCreate = () => { setEditing(null); setForm({ ...EMPTY }); setShowModal(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...EMPTY, typeId: selectedTypeId === 'all' ? '' : selectedTypeId });
+    setShowModal(true);
+  };
   const openEdit = (item: any) => {
     setEditing(item);
     setForm({ id: String(item.id), imageUrl: item.imageUrl, typeId: String(item.typeId), emotionId: String(item.emotionId) });
@@ -74,25 +105,33 @@ export default function EmojisPage() {
   const save = async () => {
     setSaving(true);
     try {
+      const duplicate = findDuplicate(form.typeId, form.emotionId, editing ? String(editing.id) : undefined);
       if (editing) {
+        if (duplicate && !confirm('Emoji này sẽ ghi đè emoji đang tồn tại cho cặp loại emoji và cảm xúc đã chọn. Tiếp tục?')) {
+          return;
+        }
         await apiFetch(`/admin/emojis/${editing.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ imageUrl: form.imageUrl, typeId: Number(form.typeId), emotionId: Number(form.emotionId) }),
         });
       } else {
+        if (duplicate) {
+          throw new Error(DUPLICATE_EMOJI_MESSAGE);
+        }
         await apiFetch('/admin/emojis', {
           method: 'POST',
           body: JSON.stringify({ id: Number(form.id), imageUrl: form.imageUrl, typeId: Number(form.typeId), emotionId: Number(form.emotionId) }),
         });
       }
-      setShowModal(false); load();
+      setShowModal(false);
+      await load();
     } catch (e: any) { alert('Lỗi: ' + e.message); }
     finally { setSaving(false); }
   };
 
   const remove = async (id: number) => {
     if (!confirm('Xóa emoji này?')) return;
-    try { await apiFetch(`/admin/emojis/${id}`, { method: 'DELETE' }); load(); }
+    try { await apiFetch(`/admin/emojis/${id}`, { method: 'DELETE' }); await load(); }
     catch (e: any) { alert('Lỗi: ' + e.message); }
   };
 
@@ -110,7 +149,7 @@ export default function EmojisPage() {
       uploaded: false,
       error: '',
     })));
-    setBulkTypeId('');
+    setBulkTypeId(selectedTypeId === 'all' ? '' : selectedTypeId);
     setShowBulk(true);
   };
 
@@ -144,6 +183,11 @@ export default function EmojisPage() {
     if (!bulkTypeId) { alert('Vui lòng chọn Loại emoji'); return; }
     const filled = slots.filter(s => s.file);
     if (!filled.length) { alert('Chưa có ảnh nào được kéo vào'); return; }
+    const duplicateSlot = filled.find(slot => findDuplicate(bulkTypeId, slot.emotionId));
+    if (duplicateSlot) {
+      alert(`Lỗi lưu: ${DUPLICATE_EMOJI_MESSAGE}`);
+      return;
+    }
 
     setBulkSaving(true);
     let idCounter = nextId();
@@ -182,7 +226,7 @@ export default function EmojisPage() {
         body: JSON.stringify({ emojis: results }),
       });
       setShowBulk(false);
-      load();
+      await load();
     } catch (e: any) {
       alert('Lỗi lưu: ' + e.message);
     } finally {
@@ -212,7 +256,7 @@ export default function EmojisPage() {
 
         {/* Bộ lọc */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '0 0 16px 0', borderBottom: '1px solid var(--border)' }}>
-          {[{ id: 'all', nameVi: 'Tất cả', count: items.length }, ...emojiTypes.map(t => ({ ...t, count: items.filter(i => String(i.typeId) === String(t.id)).length }))].map(t => {
+          {[{ id: 'all', nameVi: 'Tất cả', count: allItems.length }, ...emojiTypes.map(t => ({ ...t, count: allItems.filter(i => String(i.typeId) === String(t.id)).length }))].map(t => {
             const active = selectedTypeId === String(t.id);
             return (
               <button key={t.id} onClick={() => setSelectedTypeId(String(t.id))} style={{
