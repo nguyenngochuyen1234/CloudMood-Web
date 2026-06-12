@@ -7,6 +7,7 @@ const EMPTY = { id: '', imageUrl: '', typeId: '', emotionId: '' };
 interface EmotionSlot {
   emotionId: string;
   emotionName: string;
+  existingImageUrl: string;
   file: File | null;
   previewUrl: string;
   dragOver: boolean;
@@ -89,6 +90,28 @@ export default function EmojisPage() {
 
   const filtered = items;
 
+  const buildSlots = (typeId: string) =>
+    emotions.map(em => {
+      const existing = typeId
+        ? allItems.find(item =>
+          String(item.typeId) === String(typeId)
+          && String(item.emotionId) === String(em.id)
+        )
+        : null;
+
+      return {
+        emotionId: String(em.id),
+        emotionName: em.nameVi,
+        existingImageUrl: existing?.imageUrl || '',
+        file: null,
+        previewUrl: '',
+        dragOver: false,
+        uploading: false,
+        uploaded: false,
+        error: '',
+      };
+    });
+
   // ── Modal đơn ──────────────────────────────────────────────────────────────
   const openCreate = () => {
     setEditing(null);
@@ -135,17 +158,9 @@ export default function EmojisPage() {
 
   // ── Modal hàng loạt (grid) ─────────────────────────────────────────────────
   const openBulk = () => {
-    setSlots(emotions.map(em => ({
-      emotionId: String(em.id),
-      emotionName: em.nameVi,
-      file: null,
-      previewUrl: '',
-      dragOver: false,
-      uploading: false,
-      uploaded: false,
-      error: '',
-    })));
-    setBulkTypeId(selectedTypeId === 'all' ? '' : selectedTypeId);
+    const initialTypeId = selectedTypeId === 'all' ? '' : selectedTypeId;
+    setSlots(buildSlots(initialTypeId));
+    setBulkTypeId(initialTypeId);
     setShowBulk(true);
   };
 
@@ -174,6 +189,11 @@ export default function EmojisPage() {
     if (file && activeSlotId.current) assignFile(activeSlotId.current, file);
     e.target.value = '';
   };
+
+  useEffect(() => {
+    if (!showBulk) return;
+    setSlots(buildSlots(bulkTypeId));
+  }, [allItems, bulkTypeId, emotions, showBulk]);
 
   const saveBulk = async () => {
     if (!bulkTypeId) { alert('Vui lòng chọn Loại emoji'); return; }
@@ -401,7 +421,7 @@ export default function EmojisPage() {
                     style={{
                       position: 'relative',
                       borderRadius: 12,
-                      border: `2px ${slot.dragOver ? 'solid var(--primary)' : slot.previewUrl ? 'solid var(--border)' : 'dashed var(--border)'}`,
+                      border: `2px ${slot.dragOver ? 'solid var(--primary)' : (slot.previewUrl || slot.existingImageUrl) ? 'solid var(--border)' : 'dashed var(--border)'}`,
                       background: slot.dragOver
                         ? 'rgba(99,102,241,0.1)'
                         : slot.uploaded
@@ -428,10 +448,10 @@ export default function EmojisPage() {
                       </div>
                     )}
 
-                    {slot.previewUrl ? (
+                    {slot.previewUrl || slot.existingImageUrl ? (
                       <>
                         <img
-                          src={slot.previewUrl}
+                          src={slot.previewUrl || slot.existingImageUrl}
                           alt={slot.emotionName}
                           style={{ width: 70, height: 70, objectFit: 'contain' }}
                         />
@@ -443,9 +463,17 @@ export default function EmojisPage() {
                             justifyContent: 'center', fontSize: 11, color: '#fff',
                           }}>✓</div>
                         )}
-                        {!slot.uploading && (
+                        {slot.file && !slot.uploading && (
                           <button
-                            onClick={e => { e.stopPropagation(); updateSlot(slot.emotionId, { file: null, previewUrl: '', uploaded: false, error: '' }); }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              updateSlot(slot.emotionId, {
+                                file: null,
+                                previewUrl: '',
+                                uploaded: false,
+                                error: '',
+                              });
+                            }}
                             style={{
                               position: 'absolute', top: 4, left: 4,
                               background: 'rgba(239,68,68,0.85)', border: 'none', borderRadius: 4,
