@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { API_BASE, apiFetch } from '../api';
 
 const EMPTY = {
-  name: '', mode: 'light', isActive: true, isPro: false,
+  name: '', mode: 'lightMode', isActive: true, isPro: false,
   colorsJson: '{\n  "primary": "#E4864D",\n  "secondary": "#E4864D",\n  "background": "#FCF6EF",\n  "backgroundCard": "#FCF6EF",\n  "text": "#0F172A",\n  "title": "#512B0D",\n  "muted": "#e8a87d",\n  "textOnDark": "#FFFFFF",\n  "border": "#E2E8F0",\n  "tabBar": "#FFFFFF",\n  "success": "#22C55E",\n  "error": "#EF4444"\n}',
 };
 
@@ -22,6 +22,21 @@ const COLOR_LABELS: Record<string, string> = {
 };
 
 const IMAGE_TYPES = ['home', 'stats', 'add', 'detail'];
+
+const normalizeMode = (mode?: string) => {
+  if (mode === 'dark' || mode === 'darkMode') return 'darkMode';
+  return 'lightMode';
+};
+
+const modeMeta = (mode?: string) => {
+  const normalized = normalizeMode(mode);
+  return normalized === 'darkMode'
+    ? { className: 'badge-purple', label: '🌙 Dark', value: normalized }
+    : { className: 'badge-gray', label: '☀️ Light', value: normalized };
+};
+
+const getHomeImage = (themeImages?: any[]) =>
+  themeImages?.find(img => img.type === 'home')?.imageUrl;
 
 function ThemeSlot({
   type, existing, themeId, onAdd, onRemove,
@@ -145,7 +160,7 @@ export default function ThemesPage() {
 
   const openEdit = (item: any) => {
     setEditing(item);
-    setForm({ name: item.name, mode: item.mode || 'light', isActive: item.isActive, isPro: item.isPro, colorsJson: JSON.stringify(item.colorsJson, null, 2) });
+    setForm({ name: item.name, mode: normalizeMode(item.mode), isActive: item.isActive, isPro: item.isPro, colorsJson: JSON.stringify(item.colorsJson, null, 2) });
     setThemeImages(item.themeImages ?? []);
     setJsonError(''); setShowModal(true);
   };
@@ -210,10 +225,12 @@ export default function ThemesPage() {
             <tbody>
               {items.map(item => {
                 const colors = item.colorsJson as Record<string, string>;
+                const mode = modeMeta(item.mode);
+                const homeImageUrl = getHomeImage(item.themeImages);
                 return (
                   <tr key={item.id}>
                     <td><strong>{item.name}</strong></td>
-                    <td><span className={`badge ${item.mode === 'dark' ? 'badge-purple' : 'badge-gray'}`}>{item.mode === 'dark' ? '🌙 Dark' : '☀️ Light'}</span></td>
+                    <td><span className={`badge ${mode.className}`} title={mode.value}>{mode.label}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {Object.entries(colors).slice(0, 4).map(([k, v]) => (
@@ -223,7 +240,19 @@ export default function ThemesPage() {
                     </td>
                     <td><span className={`badge ${item.isActive ? 'badge-green' : 'badge-red'}`}>{item.isActive ? 'Hoạt động' : 'Tắt'}</span></td>
                     <td><span className={`badge ${item.isPro ? 'badge-orange' : 'badge-gray'}`}>{item.isPro ? '⭐ Pro' : 'Free'}</span></td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.themeImages?.length ?? 0} ảnh</td>
+                    <td>
+                      {homeImageUrl ? (
+                        <img
+                          src={homeImageUrl}
+                          alt={`${item.name} Home`}
+                          title="Home"
+                          style={{ width: 56, height: 36, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-color)', display: 'block' }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Chưa có Home</span>
+                      )}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-sm btn-secondary" onClick={() => openEdit(item)}>✏️ Sửa</button>
@@ -254,8 +283,8 @@ export default function ThemesPage() {
             <div className="form-group">
               <label className="form-label">Chế độ</label>
               <select className="form-select" value={form.mode} onChange={e => set('mode', e.target.value)}>
-                <option value="light">☀️ Light</option>
-                <option value="dark">🌙 Dark</option>
+                <option value="lightMode">☀️ Light</option>
+                <option value="darkMode">🌙 Dark</option>
               </select>
             </div>
 
