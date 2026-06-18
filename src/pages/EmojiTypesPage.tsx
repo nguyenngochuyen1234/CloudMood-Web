@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 
-const EMPTY = { id: '', nameEn: '', nameVi: '', descriptionEn: '', descriptionVi: '', isActive: true, isPro: false };
+const EMPTY = { id: '', nameEn: '', nameVi: '', descriptionEn: '', descriptionVi: '', isActive: true, isPro: false, isProVN: false };
 
 export default function EmojiTypesPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -21,7 +21,16 @@ export default function EmojiTypesPage() {
   const openCreate = () => { setEditing(null); setForm({ ...EMPTY }); setShowModal(true); };
   const openEdit = (item: any) => {
     setEditing(item);
-    setForm({ id: String(item.id), nameEn: item.nameEn, nameVi: item.nameVi, descriptionEn: item.descriptionEn || '', descriptionVi: item.descriptionVi || '', isActive: item.isActive, isPro: item.isPro });
+    setForm({
+      id: String(item.id),
+      nameEn: item.nameEn,
+      nameVi: item.nameVi,
+      descriptionEn: item.descriptionEn || '',
+      descriptionVi: item.descriptionVi || '',
+      isActive: item.isActive,
+      isPro: item.isPro,
+      isProVN: item.isProVN ?? false,
+    });
     setShowModal(true);
   };
 
@@ -61,7 +70,7 @@ export default function EmojiTypesPage() {
           <div className="empty-state"><span className="empty-icon">🎨</span><span>Chưa có loại emoji nào</span></div>
         ) : (
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Tên (VI)</th><th>Tên (EN)</th><th>Trạng thái</th><th>Pro</th><th>Hành động</th></tr></thead>
+            <thead><tr><th>ID</th><th>Tên (VI)</th><th>Tên (EN)</th><th>Trạng thái</th><th>Pro</th><th>Pro VN</th><th>Hành động</th></tr></thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.id}>
@@ -70,6 +79,7 @@ export default function EmojiTypesPage() {
                   <td style={{ color: 'var(--text-muted)' }}>{item.nameEn}</td>
                   <td><span className={`badge ${item.isActive ? 'badge-green' : 'badge-red'}`}>{item.isActive ? 'Hoạt động' : 'Tắt'}</span></td>
                   <td><span className={`badge ${item.isPro ? 'badge-orange' : 'badge-gray'}`}>{item.isPro ? '⭐ Pro' : 'Free'}</span></td>
+                  <td><span className={`badge ${item.isProVN ? 'badge-orange' : 'badge-gray'}`}>{item.isProVN ? '⭐ Pro VN' : 'Free'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-sm btn-secondary" onClick={() => openEdit(item)}>✏️ Sửa</button>
@@ -127,6 +137,10 @@ export default function EmojiTypesPage() {
               <label className="form-check">
                 <input type="checkbox" checked={form.isPro} onChange={e => set('isPro', e.target.checked)} />
                 <span>⭐ Chỉ dành cho Pro</span>
+              </label>
+              <label className="form-check">
+                <input type="checkbox" checked={form.isProVN} onChange={e => set('isProVN', e.target.checked)} />
+                <span>⭐ Chỉ dành cho Pro VN</span>
               </label>
             </div>
 

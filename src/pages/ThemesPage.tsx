@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { API_BASE, apiFetch } from '../api';
 
 const EMPTY = {
-  name: '', mode: 'lightMode', isActive: true, isPro: false,
+  name: '', mode: 'lightMode', isActive: true, isPro: false, isProVN: false,
   colorsJson: '{\n  "primary": "#E4864D",\n  "secondary": "#E4864D",\n  "background": "#FCF6EF",\n  "backgroundCard": "#FCF6EF",\n  "text": "#0F172A",\n  "title": "#512B0D",\n  "muted": "#e8a87d",\n  "textOnDark": "#FFFFFF",\n  "border": "#E2E8F0",\n  "tabBar": "#FFFFFF",\n  "success": "#22C55E",\n  "error": "#EF4444"\n}',
 };
 
@@ -160,7 +160,14 @@ export default function ThemesPage() {
 
   const openEdit = (item: any) => {
     setEditing(item);
-    setForm({ name: item.name, mode: normalizeMode(item.mode), isActive: item.isActive, isPro: item.isPro, colorsJson: JSON.stringify(item.colorsJson, null, 2) });
+    setForm({
+      name: item.name,
+      mode: normalizeMode(item.mode),
+      isActive: item.isActive,
+      isPro: item.isPro,
+      isProVN: item.isProVN ?? false,
+      colorsJson: JSON.stringify(item.colorsJson, null, 2),
+    });
     setThemeImages(item.themeImages ?? []);
     setJsonError(''); setShowModal(true);
   };
@@ -221,7 +228,7 @@ export default function ThemesPage() {
           <div className="empty-state"><span className="empty-icon">🎭</span><span>Chưa có giao diện nào</span></div>
         ) : (
           <table className="data-table">
-            <thead><tr><th>Tên</th><th>Chế độ</th><th>Màu sắc</th><th>Trạng thái</th><th>Pro</th><th>Ảnh</th><th>Hành động</th></tr></thead>
+            <thead><tr><th>Tên</th><th>Chế độ</th><th>Màu sắc</th><th>Trạng thái</th><th>Pro</th><th>Pro VN</th><th>Ảnh</th><th>Hành động</th></tr></thead>
             <tbody>
               {items.map(item => {
                 const colors = item.colorsJson as Record<string, string>;
@@ -240,6 +247,7 @@ export default function ThemesPage() {
                     </td>
                     <td><span className={`badge ${item.isActive ? 'badge-green' : 'badge-red'}`}>{item.isActive ? 'Hoạt động' : 'Tắt'}</span></td>
                     <td><span className={`badge ${item.isPro ? 'badge-orange' : 'badge-gray'}`}>{item.isPro ? '⭐ Pro' : 'Free'}</span></td>
+                    <td><span className={`badge ${item.isProVN ? 'badge-orange' : 'badge-gray'}`}>{item.isProVN ? '⭐ Pro VN' : 'Free'}</span></td>
                     <td>
                       {homeImageUrl ? (
                         <img
@@ -391,6 +399,10 @@ export default function ThemesPage() {
               <label className="form-check">
                 <input type="checkbox" checked={form.isPro} onChange={e => set('isPro', e.target.checked)} />
                 <span>⭐ Chỉ dành cho Pro</span>
+              </label>
+              <label className="form-check">
+                <input type="checkbox" checked={form.isProVN} onChange={e => set('isProVN', e.target.checked)} />
+                <span>⭐ Chỉ dành cho Pro VN</span>
               </label>
             </div>
 

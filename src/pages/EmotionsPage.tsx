@@ -3,7 +3,7 @@ import { apiFetch } from '../api';
 
 const EMPTY_FORM = {
   id: '', nameEn: '', nameVi: '', descriptionEn: '', descriptionVi: '',
-  color: '#8b5cf6', score: '0', isPro: false,
+  color: '#8b5cf6', score: '0', isPro: false, isProVN: false,
 };
 
 export default function EmotionsPage() {
@@ -41,6 +41,7 @@ export default function EmotionsPage() {
       color: item.color || '#8b5cf6',
       score: String(item.score),
       isPro: item.isPro,
+      isProVN: item.isProVN ?? false,
     });
     setShowModal(true);
   };
@@ -107,6 +108,7 @@ export default function EmotionsPage() {
                 <th>Màu</th>
                 <th>Điểm</th>
                 <th>Pro</th>
+                <th>Pro VN</th>
                 <th>Hành động</th>
               </tr>
             </thead>
@@ -128,6 +130,11 @@ export default function EmotionsPage() {
                   <td>
                     <span className={`badge ${item.isPro ? 'badge-orange' : 'badge-gray'}`}>
                       {item.isPro ? '⭐ Pro' : 'Free'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${item.isProVN ? 'badge-orange' : 'badge-gray'}`}>
+                      {item.isProVN ? '⭐ Pro VN' : 'Free'}
                     </span>
                   </td>
                   <td>
@@ -198,6 +205,10 @@ export default function EmotionsPage() {
             <label className="form-check">
               <input type="checkbox" checked={form.isPro} onChange={e => set('isPro', e.target.checked)} />
               <span>⭐ Chỉ dành cho người dùng Pro</span>
+            </label>
+            <label className="form-check">
+              <input type="checkbox" checked={form.isProVN} onChange={e => set('isProVN', e.target.checked)} />
+              <span>⭐ Chỉ dành cho người dùng Pro VN</span>
             </label>
 
             <div className="modal-footer">
