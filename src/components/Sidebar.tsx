@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'emojis', icon: '🖼️', label: 'Emoji' },
   { id: 'themes', icon: '🎭', label: 'Giao diện' },
   { id: 'events', icon: '📅', label: 'Sự kiện' },
+  { id: 'app-versions', icon: '📱', label: 'App Versions' },
 ];
 
 interface Props {

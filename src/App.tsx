@@ -10,6 +10,7 @@ import EmojiTypesPage from './pages/EmojiTypesPage';
 import EmojisPage from './pages/EmojisPage';
 import ThemesPage from './pages/ThemesPage';
 import EventsPage from './pages/EventsPage';
+import AppVersionsPage from './pages/AppVersionsPage';
 
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   dashboard:    { title: '📊 Dashboard',              subtitle: 'Tổng quan hệ thống DailyMood' },
@@ -19,6 +20,7 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   emojis:       { title: '🖼️ Quản lý Emoji',          subtitle: 'Quản lý kho emoji và liên kết cảm xúc' },
   themes:       { title: '🎭 Quản lý giao diện',      subtitle: 'Tùy chỉnh màu sắc và giao diện ứng dụng' },
   events:       { title: '📅 Quản lý sự kiện',        subtitle: 'Tạo và quản lý các sự kiện đặc biệt' },
+  'app-versions': { title: '📱 App Versions',         subtitle: 'Luu va chinh sua cau hinh version update cho iOS va Android' },
 };
 
 export default function App() {
@@ -63,6 +65,7 @@ export default function App() {
       case 'emojis':       return <EmojisPage />;
       case 'themes':       return <ThemesPage />;
       case 'events':       return <EventsPage />;
+      case 'app-versions': return <AppVersionsPage />;
       default:             return <DashboardPage />;
     }
   };
